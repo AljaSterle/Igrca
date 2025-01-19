@@ -139,6 +139,8 @@
   <ItemGroup>
     <ClCompile Include="..\Breakout\glad.c" />
     <ClCompile Include="game.cpp" />
+    <ClCompile Include="game_object.cpp" />
+    <ClCompile Include="GLUtils.h" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="resource_manager.cpp" />
     <ClCompile Include="shader.cpp" />
@@ -147,6 +149,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game.h" />
+    <ClInclude Include="game_object.h" />
     <ClInclude Include="resource_manager.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="sprite_renderer.h" />
@@ -156,6 +159,9 @@
   <ItemGroup>
     <None Include="sprite.fs" />
     <None Include="sprite.vs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="block.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

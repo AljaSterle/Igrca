@@ -31,9 +31,7 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
+
     glfwWindowHint(GLFW_RESIZABLE, false);
 
     GLFWwindow* window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Igrca", nullptr, nullptr);
@@ -84,7 +82,7 @@ int main(int argc, char* argv[])
 
         // render
         // ------
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(0.13f, 0.56f, 0.13f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         Igrca.Render();
 
