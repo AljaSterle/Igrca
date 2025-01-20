@@ -7,17 +7,23 @@
 
 #include "GLUtils.h"
 
+#include <cmath>
+#include <cstdlib>
+#include <vector>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 SpriteRenderer* Renderer;
 GameObject* Player;
 
-const glm::vec2 PLAYER_SIZE(100, 100);
-const float PLAYER_VELOCITY(500.0f);
+const float spawn = 5.0f;
+float fromSpawn = 0.0f;
+
+const glm::vec2 PLAYER_SIZE(20, 20);
+const float PLAYER_VELOCITY(300.0f);
 
 Game::Game(unsigned int width, unsigned int height)
-    : Keys(), Width(width), Height(height)
+	: Keys(), Width(width), Height(height), State(GAME_ACTIVE)
 {
 
 }
@@ -29,6 +35,8 @@ Game::~Game()
 
 void Game::Init()
 {
+	srand(time(0));
+
 	ResourceManager::LoadShader("sprite.vs", "sprite.fs", nullptr, "sprite");
 	
 	glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(this->Width), static_cast<float>(this->Height), 0.0f, -1.0f, 1.0f);
@@ -42,55 +50,67 @@ void Game::Init()
 
 	ResourceManager::LoadTexture("awesomeface.png", true, "face");
 	ResourceManager::LoadTexture("block.png", true, "block");
+	ResourceManager::LoadTexture("ogenjcek.jpg", false, "fire");
 
-	glm::vec2 playerPos = glm::vec2(this->Width / 2 - PLAYER_SIZE.x / 2, this->Height - PLAYER_SIZE.y);
-	Texture2D ttmp3 = ResourceManager::GetTexture("block");
-	Player = new GameObject(playerPos, PLAYER_SIZE, ttmp3);
+	// load levels
+	GameLevel one;
+	GameLevel two;
+	this->Levels.push_back(one);
+	this->Levels.push_back(two);
+	this->Level = 0;
+
+	glm::vec2 playerSize = glm::vec2(this->Width * 0.05f, this->Width * 0.05f);
+	glm::vec2 playerPos = glm::vec2(this->Width / 2 - playerSize.x / 2, this->Height - playerSize.y);
+	
+	Player = new GameObject(playerPos, PLAYER_SIZE, ResourceManager::GetTexture("block"));
+	Fires.clear();
 }
 
 void Game::Update(float dt)
 {
+	Player->Size.x = this->Width * 0.05f;
+	Player->Size.y = this->Width * 0.05f;
 
+	fromSpawn += dt;
+	if (fromSpawn >= spawn) {
+		fromSpawn = 0.0f;
+		float x = rand() % (this->Width);
+		float y = rand() % (this->Height);
+		Fires.push_back(GameObject(glm::vec2(x, y), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
+	}
 }
 
 void Game::ProcessInput(float dt)
 {
-	float velocity = PLAYER_VELOCITY * dt;
-	if (this->Keys[GLFW_KEY_A])
-	{
-		if (Player->Position.x >= 0)
-			Player->Position.x -= velocity;
-	}
-	if (this->Keys[GLFW_KEY_D])
-	{
-		if (Player->Position.x <= this->Width - Player->Size.x)
-			Player->Position.x += velocity;
-	}
-	if (this->Keys[GLFW_KEY_W])
-	{
-		if (Player->Position.y >= 0)
-			Player->Position.y -= velocity;
-	}
-	if (this->Keys[GLFW_KEY_S])
-	{
-		if (Player->Position.y <= this->Height - Player->Size.y)
-			Player->Position.y += velocity;
-	}
+	if (this->State == GAME_ACTIVE) {
 
+		float velocity = PLAYER_VELOCITY * dt;
+		if (this->Keys[GLFW_KEY_A]) {
+			if (Player->Position.x >= 0)
+				Player->Position.x -= velocity;
+		}
+		if (this->Keys[GLFW_KEY_D]) {
+			if (Player->Position.x <= this->Width - Player->Size.x)
+				Player->Position.x += velocity;
+		}
+		if (this->Keys[GLFW_KEY_W]) {
+			if (Player->Position.y >= 0)
+				Player->Position.y -= velocity;
+		}
+		if (this->Keys[GLFW_KEY_S]) {
+			if (Player->Position.y <= this->Height - Player->Size.y)
+				Player->Position.y += velocity;
+		}
+	}
 }
 
 void Game::Render()
 {
-	Texture2D ttmp = ResourceManager::GetTexture("face");
-	Texture2D ttmp2 = Player->Sprite;
-	Renderer->DrawSprite(ttmp,
-		// position					size					rotation		color	
-		glm::vec2(200.0f, 200.0f), glm::vec2(300.0f, 400.0f), 45.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-	 //Player->Draw(*Renderer);
-	// std::cout << Player->Color.x << " " << Player->Color.y << " " << Player->Color.z << std::endl;
+	if (this->State == GAME_ACTIVE) {
+		for (GameObject fire : Fires)
+			fire.Draw(*Renderer);
+		Player->Draw(*Renderer);
+	}
 	
-	Renderer->DrawSprite(ttmp2,
-		// position					size					rotation		color	
-	Player->Position, Player->Size, 0.0f, Player->Color);
 	IsThereError();
 }
