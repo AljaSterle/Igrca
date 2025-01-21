@@ -69,6 +69,31 @@ void Game::Init()
 	Burnt.clear();
 }
 
+void Game::DoCollisions() {
+	for (auto it = Fires.begin(); it != Fires.end(); ) {
+		bool collisionX = Player->Position.x + Player->Size.x >= it->Position.x &&
+			Player->Position.x <= it->Position.x + it->Size.x;
+		bool collisionY = Player->Position.y + Player->Size.y >= it->Position.y &&
+			Player->Position.y <= it->Position.y + it->Size.y;
+		if (collisionX && collisionY) {
+			it = Fires.erase(it); // Erase the element and get the next iterator
+			break;
+		}
+		else {
+			++it; // Move to the next element
+		}
+	}
+	/*for (Fire& fire : Fires) {
+		bool collisionX = Player->Position.x + Player->Size.x >= fire.Position.x + fire.Size.x >= Player->Position.x;
+		bool collisionY = Player->Position.y + Player->Size.y >= fire.Position.y + fire.Size.y >= Player->Position.y;
+		if (collisionX && collisionY) {
+			Fires.erase(std::remove(Fires.begin(), Fires.end(), fire), Fires.end());
+			break;
+		}
+		
+	}*/
+}
+
 void Game::Update(float dt)
 {
 	Player->Size.x = this->Width * 0.05f;

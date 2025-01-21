@@ -29,6 +29,7 @@ public:
     // initialize game state (load all shaders/textures/levels)
     void Init();
     // game loop
+	void DoCollisions();
     void ProcessInput(float dt);
     void Update(float dt);
     void Render();
