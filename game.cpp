@@ -4,6 +4,7 @@
 #include "shader.h"
 #include "texture.h"
 #include "game_object.h"
+#include "fire.h"
 
 #include "GLUtils.h"
 
@@ -23,7 +24,7 @@ const glm::vec2 PLAYER_SIZE(20, 20);
 const float PLAYER_VELOCITY(300.0f);
 
 Game::Game(unsigned int width, unsigned int height)
-	: Keys(), Width(width), Height(height), State(GAME_ACTIVE)
+	: Keys(), Width(width), Height(height), State(GAME_ACTIVE), Level(0)
 {
 
 }
@@ -51,6 +52,7 @@ void Game::Init()
 	ResourceManager::LoadTexture("awesomeface.png", true, "face");
 	ResourceManager::LoadTexture("block.png", true, "block");
 	ResourceManager::LoadTexture("ogenjcek.jpg", false, "fire");
+	ResourceManager::LoadTexture("burnt.png", true, "burnt");
 
 	// load levels
 	GameLevel one;
@@ -64,6 +66,7 @@ void Game::Init()
 	
 	Player = new GameObject(playerPos, PLAYER_SIZE, ResourceManager::GetTexture("block"));
 	Fires.clear();
+	Burnt.clear();
 }
 
 void Game::Update(float dt)
@@ -71,12 +74,22 @@ void Game::Update(float dt)
 	Player->Size.x = this->Width * 0.05f;
 	Player->Size.y = this->Width * 0.05f;
 
+	for (Fire& fire : Fires) {
+		fire.flekCounter += dt;
+
+		if (fire.flekCounter >= fire.flek && fire.nekoc == false) {
+			float x = fire.Position.x - (fire.Size.x/2);
+			float y = fire.Position.y - (fire.Size.y / 2);
+			Burnt.push_back(Fire(glm::vec2(x, y), glm::vec2(100, 100), ResourceManager::GetTexture("burnt")));
+			fire.nekoc = true;
+		}
+	}
 	fromSpawn += dt;
 	if (fromSpawn >= spawn) {
 		fromSpawn = 0.0f;
 		float x = rand() % (this->Width);
 		float y = rand() % (this->Height);
-		Fires.push_back(GameObject(glm::vec2(x, y), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
+		Fires.push_back(Fire(glm::vec2(x, y), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
 	}
 }
 
@@ -107,7 +120,10 @@ void Game::ProcessInput(float dt)
 void Game::Render()
 {
 	if (this->State == GAME_ACTIVE) {
-		for (GameObject fire : Fires)
+		for (Fire burnt : Burnt) {
+			burnt.Draw(*Renderer);
+		}
+		for (Fire fire : Fires)
 			fire.Draw(*Renderer);
 		Player->Draw(*Renderer);
 	}

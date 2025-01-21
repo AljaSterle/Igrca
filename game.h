@@ -1,5 +1,6 @@
 #include <vector>
 #include "game_object.h"
+#include "fire.h"
 
 #include "game_level.h"
 
@@ -20,7 +21,8 @@ public:
 	std::vector<GameLevel> Levels;
 	unsigned int Level;
 
-	std::vector<GameObject> Fires;
+	std::vector<Fire> Fires;
+    std::vector<Fire> Burnt;
     // constructor/destructor
     Game(unsigned int width, unsigned int height);
     ~Game();
