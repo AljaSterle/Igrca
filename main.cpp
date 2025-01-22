@@ -102,5 +102,15 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 	Igrca.Width = width;
 	Igrca.Height = height;
+
+    // Update the projection matrix
+    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, -1.0f, 1.0f);
+    Shader spriteShader = ResourceManager::GetShader("sprite");
+    spriteShader.Use();
+    spriteShader.SetMatrix4("projection", projection);
+	spriteShader.SetInteger("image", 0);
+
+	//Igrca.Resize(width, height);
+
 	Igrca.Update(0.0f);
 }

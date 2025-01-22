@@ -77,7 +77,7 @@ void Game::DoCollisions() {
 			Player->Position.y <= it->Position.y + it->Size.y;
 		if (collisionX && collisionY) {
 			it = Fires.erase(it); // Erase the element and get the next iterator
-			break;
+			
 		}
 		else {
 			++it; // Move to the next element
@@ -94,10 +94,33 @@ void Game::DoCollisions() {
 	}*/
 }
 
+void Game::Resize(float width, float height)
+{
+	// Adjust player position and size
+	Player->Position.x *= width;
+	Player->Position.y *= height;
+
+	// Adjust positions and sizes of other game objects if necessary
+	for (Fire& fire : Fires) {
+		fire.Position.x *= width;
+		fire.Position.y *= height;
+		fire.Size.x *= width;
+		fire.Size.y *= height;
+	}
+
+	for (Fire& burnt : Burnt) {
+		burnt.Position.x *= width;
+		burnt.Position.y *= height;
+		burnt.Size.x *= width;
+		burnt.Size.y *= height;
+	}
+}
+
 void Game::Update(float dt)
 {
-	Player->Size.x = this->Width * 0.05f;
-	Player->Size.y = this->Width * 0.05f;
+	float playerSize = std::min(this->Width, this->Height) * 0.05f;
+	Player->Size.x = playerSize;
+	Player->Size.y = playerSize;
 
 	for (Fire& fire : Fires) {
 		fire.flekCounter += dt;
@@ -116,6 +139,7 @@ void Game::Update(float dt)
 		float y = rand() % (this->Height);
 		Fires.push_back(Fire(glm::vec2(x, y), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
 	}
+	DoCollisions();
 }
 
 void Game::ProcessInput(float dt)
@@ -139,6 +163,9 @@ void Game::ProcessInput(float dt)
 			if (Player->Position.y <= this->Height - Player->Size.y)
 				Player->Position.y += velocity;
 		}
+		std::cout << "\rWidth: " << this->Width << " Height: " << this->Height << "x: " << Player->Position.x << " y: " << Player->Position.y << "\n";
+		
+		std::cout.flush();
 	}
 }
 
