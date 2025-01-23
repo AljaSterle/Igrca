@@ -100,6 +100,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
+
+	Igrca.Resize(width, height);
+
 	Igrca.Width = width;
 	Igrca.Height = height;
 
@@ -110,7 +113,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     spriteShader.SetMatrix4("projection", projection);
 	spriteShader.SetInteger("image", 0);
 
-	//Igrca.Resize(width, height);
 
 	Igrca.Update(0.0f);
 }

@@ -14,14 +14,14 @@ class Game
 {
 public:
     // game state
-	GameState    State;
+    GameState    State;
     bool         Keys[1024];
     unsigned int Width, Height;
 
-	std::vector<GameLevel> Levels;
-	unsigned int Level;
+    std::vector<GameLevel> Levels;
+    unsigned int Level;
 
-	std::vector<Fire> Fires;
+    std::vector<Fire> Fires;
     std::vector<Fire> Burnt;
     // constructor/destructor
     Game(unsigned int width, unsigned int height);
@@ -30,7 +30,7 @@ public:
     void Init();
     // game loop
     void Resize(float, float);
-	void DoCollisions();
+    void DoCollisions();
     void ProcessInput(float dt);
     void Update(float dt);
     void Render();

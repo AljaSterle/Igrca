@@ -96,23 +96,28 @@ void Game::DoCollisions() {
 
 void Game::Resize(float width, float height)
 {
+	float wratio = width / this->Width;
+	float hratio = height / this->Height;
+
+	float min = std::min(width, height);
+
 	// Adjust player position and size
-	Player->Position.x *= width;
-	Player->Position.y *= height;
+	Player->Position.x *= wratio;
+	Player->Position.y *= hratio;
 
 	// Adjust positions and sizes of other game objects if necessary
 	for (Fire& fire : Fires) {
-		fire.Position.x *= width;
-		fire.Position.y *= height;
-		fire.Size.x *= width;
-		fire.Size.y *= height;
+		fire.Position.x *= wratio;
+		fire.Position.y *= hratio;
+		fire.Size.x = 0.05f * min;
+		fire.Size.y = 0.05f * min;
 	}
 
 	for (Fire& burnt : Burnt) {
-		burnt.Position.x *= width;
-		burnt.Position.y *= height;
-		burnt.Size.x *= width;
-		burnt.Size.y *= height;
+		burnt.Position.x *= wratio;
+		burnt.Position.y *= hratio;
+		burnt.Size.x = 0.05f * min;
+		burnt.Size.y = 0.05f * min;
 	}
 }
 
@@ -131,6 +136,12 @@ void Game::Update(float dt)
 			Burnt.push_back(Fire(glm::vec2(x, y), glm::vec2(100, 100), ResourceManager::GetTexture("burnt")));
 			fire.nekoc = true;
 		}
+		fire.Size.x = 0.05f * std::min(Width, Height);
+		fire.Size.y = 0.05f * std::min(Width, Height);
+	}
+	for (Fire& burnt : Burnt) {
+		burnt.Size.x = 0.1f * std::min(Width, Height);
+		burnt.Size.y = 0.1f * std::min(Width, Height);
 	}
 	fromSpawn += dt;
 	if (fromSpawn >= spawn) {
@@ -172,10 +183,11 @@ void Game::ProcessInput(float dt)
 void Game::Render()
 {
 	if (this->State == GAME_ACTIVE) {
-		for (Fire burnt : Burnt) {
+		for (Fire& burnt : Burnt) {
+			
 			burnt.Draw(*Renderer);
 		}
-		for (Fire fire : Fires)
+		for (Fire& fire : Fires)
 			fire.Draw(*Renderer);
 		Player->Draw(*Renderer);
 	}
