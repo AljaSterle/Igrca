@@ -16,13 +16,16 @@ public:
     // game state
     GameState    State;
     bool         Keys[1024];
+	bool 	     KeysProcessed[1024];
+    bool         startFires;
     unsigned int Width, Height;
 
     std::vector<GameLevel> Levels;
     unsigned int Level;
 
-    std::vector<Fire> Fires;
-    std::vector<Fire> Burnt;
+    std::vector<SideObject> Fires;
+    std::vector<SideObject> Burnt;
+
     // constructor/destructor
     Game(unsigned int width, unsigned int height);
     ~Game();
