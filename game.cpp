@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <vector>
+#include <algorithm>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -68,33 +69,21 @@ void Game::Init()
 	Player = new GameObject(playerPos, PLAYER_SIZE, ResourceManager::GetTexture("block"));
 	Fires.clear();
 	Burnt.clear();
+	indijanci->clear();
+	hejtrji->clear();
 
 	this->State = GAME_MENU;
 }
 
 void Game::DoCollisions() {
-	for (auto it = Fires.begin(); it != Fires.end(); ) {
-		bool collisionX = Player->Position.x + Player->Size.x >= it->Position.x &&
-			Player->Position.x <= it->Position.x + it->Size.x;
-		bool collisionY = Player->Position.y + Player->Size.y >= it->Position.y &&
-			Player->Position.y <= it->Position.y + it->Size.y;
-		if (collisionX && collisionY) {
-			it = Fires.erase(it); // Erase the element and get the next iterator
-			
-		}
-		else {
-			++it; // Move to the next element
-		}
-	}
-	/*for (Fire& fire : Fires) {
-		bool collisionX = Player->Position.x + Player->Size.x >= fire.Position.x + fire.Size.x >= Player->Position.x;
-		bool collisionY = Player->Position.y + Player->Size.y >= fire.Position.y + fire.Size.y >= Player->Position.y;
-		if (collisionX && collisionY) {
-			Fires.erase(std::remove(Fires.begin(), Fires.end(), fire), Fires.end());
-			break;
-		}
-		
-	}*/
+	auto rem = std::remove_if(Fires.begin(), Fires.end(), [this](Fire& fire) {
+		bool collisionX = Player->Position.x + Player->Size.x >= fire.Position.x &&
+			Player->Position.x <= fire.Position.x + fire.Size.x;
+		bool collisionY = Player->Position.y + Player->Size.y >= fire.Position.y &&
+			Player->Position.y <= fire.Position.y + fire.Size.y;
+		return collisionX && collisionY;
+		});
+	Fires.erase(rem, Fires.end());
 }
 
 void Game::Resize(float width, float height)
@@ -109,14 +98,14 @@ void Game::Resize(float width, float height)
 	Player->Position.y *= hratio;
 
 	// Adjust positions and sizes of other game objects if necessary
-	for (SideObject& fire : Fires) {
+	for (Fire& fire : Fires) {
 		fire.Position.x *= wratio;
 		fire.Position.y *= hratio;
 		fire.Size.x = 0.05f * min;
 		fire.Size.y = 0.05f * min;
 	}
 
-	for (SideObject& burnt : Burnt) {
+	for (Fire& burnt : Burnt) {
 		burnt.Position.x *= wratio;
 		burnt.Position.y *= hratio;
 		burnt.Size.x = 0.05f * min;
@@ -134,19 +123,19 @@ void Game::Update(float dt)
 	else if (this->State == GAME_MENU)
 		startFires = false;
 	if (startFires == true) {
-		for (SideObject& fire : Fires) {
+		for (Fire& fire : Fires) {
 			fire.flekCounter += dt;
 
 			if (fire.flekCounter >= fire.flek && fire.nekoc == false) {
 				float x = fire.Position.x - (fire.Size.x/2);
 				float y = fire.Position.y - (fire.Size.y / 2);
-				Burnt.push_back(SideObject(glm::vec2(x, y), glm::vec2(100, 100), ResourceManager::GetTexture("burnt")));
+				Burnt.push_back(Fire(glm::vec2(x, y), glm::vec2(100, 100), ResourceManager::GetTexture("burnt")));
 				fire.nekoc = true;
 			}
 			fire.Size.x = 0.05f * std::min(Width, Height);
 			fire.Size.y = 0.05f * std::min(Width, Height);
 		}
-		for (SideObject& burnt : Burnt) {
+		for (Fire& burnt : Burnt) {
 			burnt.Size.x = 0.1f * std::min(Width, Height);
 			burnt.Size.y = 0.1f * std::min(Width, Height);
 		}
@@ -155,7 +144,7 @@ void Game::Update(float dt)
 			fromSpawn = 0.0f;
 			float x = rand() % (this->Width);
 			float y = rand() % (this->Height);
-			Fires.push_back(SideObject(glm::vec2(x, y), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
+			Fires.push_back(Fire(glm::vec2(x, y), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
 		}
 		DoCollisions();
 	}
@@ -201,12 +190,14 @@ void Game::Render()
 	glClearColor(0.13f, 0.56f, 0.13f, 1.0f);
 
 	if (this->State == GAME_ACTIVE || this->State == GAME_MENU) {
-		for (SideObject& burnt : Burnt) {
-			
+		for (Fire& burnt : Burnt)
 			burnt.Draw(*Renderer);
-		}
-		for (SideObject& fire : Fires)
+		for (Fire& fire : Fires)
 			fire.Draw(*Renderer);
+		for (GameObject& indijanec : indijanci[3])
+			indijanec.Draw(*Renderer);
+		for (GameObject& hejtr : hejtrji[3])
+			hejtr.Draw(*Renderer);
 		Player->Draw(*Renderer);
 	}
 	if (this->State == GAME_MENU) {

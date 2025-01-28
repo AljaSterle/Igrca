@@ -23,8 +23,11 @@ public:
     std::vector<GameLevel> Levels;
     unsigned int Level;
 
-    std::vector<SideObject> Fires;
-    std::vector<SideObject> Burnt;
+    std::vector<Fire> Fires;
+    std::vector<Fire> Burnt;
+
+	std::vector<GameObject> indijanci[3];
+	std::vector<GameObject> hejtrji[3];
 
     // constructor/destructor
     Game(unsigned int width, unsigned int height);
