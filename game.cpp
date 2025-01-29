@@ -55,6 +55,8 @@ void Game::Init()
 	ResourceManager::LoadTexture("ogenjcek.jpg", false, "fire");
 	ResourceManager::LoadTexture("burnt.png", true, "burnt");
 	ResourceManager::LoadTexture("menu.png", true, "menu");
+	ResourceManager::LoadTexture("native-american.png", true, "indijanec");
+	ResourceManager::LoadTexture("pozigalec.png", true, "pozigalec");
 
 	// load levels
 	GameLevel one;
@@ -69,8 +71,10 @@ void Game::Init()
 	Player = new GameObject(playerPos, PLAYER_SIZE, ResourceManager::GetTexture("block"));
 	Fires.clear();
 	Burnt.clear();
-	indijanci->clear();
-	hejtrji->clear();
+	for (int i = 0; i < 3; i++) {
+		indijanci.push_back(GameObject(glm::vec2(50, this->Height-50), glm::vec2(50, 50), ResourceManager::GetTexture("indijanec")));
+		pozigalci.push_back(GameObject(glm::vec2(this->Width - 50, 50), glm::vec2(50, 50), ResourceManager::GetTexture("pozigalec")));
+	}
 
 	this->State = GAME_MENU;
 }
@@ -110,6 +114,20 @@ void Game::Resize(float width, float height)
 		burnt.Position.y *= hratio;
 		burnt.Size.x = 0.05f * min;
 		burnt.Size.y = 0.05f * min;
+	}
+
+	for (GameObject& indijanec : indijanci) {
+		indijanec.Position.x *= wratio;
+		indijanec.Position.y *= hratio;
+		indijanec.Size.x = 0.05f * min;
+		indijanec.Size.y = 0.05f * min;
+	}
+
+	for (GameObject& hejtr : pozigalci) {
+		hejtr.Position.x *= wratio;
+		hejtr.Position.y *= hratio;
+		hejtr.Size.x = 0.05f * min;
+		hejtr.Size.y = 0.05f * min;
 	}
 }
 
@@ -180,8 +198,6 @@ void Game::ProcessInput(float dt)
 			if (Player->Position.y <= this->Height - Player->Size.y)
 				Player->Position.y += velocity;
 		}
-		// std::cout << "\rWidth: " << this->Width << " Height: " << this->Height << "x: " << Player->Position.x << " y: " << Player->Position.y << "\n";
-		// std::cout.flush();
 	}
 }
 
@@ -194,9 +210,9 @@ void Game::Render()
 			burnt.Draw(*Renderer);
 		for (Fire& fire : Fires)
 			fire.Draw(*Renderer);
-		for (GameObject& indijanec : indijanci[3])
+		for (GameObject& indijanec : indijanci)
 			indijanec.Draw(*Renderer);
-		for (GameObject& hejtr : hejtrji[3])
+		for (GameObject& hejtr : pozigalci)
 			hejtr.Draw(*Renderer);
 		Player->Draw(*Renderer);
 	}

@@ -26,8 +26,8 @@ public:
     std::vector<Fire> Fires;
     std::vector<Fire> Burnt;
 
-	std::vector<GameObject> indijanci[3];
-	std::vector<GameObject> hejtrji[3];
+	std::vector<GameObject> indijanci;
+	std::vector<GameObject> pozigalci;
 
     // constructor/destructor
     Game(unsigned int width, unsigned int height);
