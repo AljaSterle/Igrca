@@ -79,6 +79,18 @@ void Game::Init()
 	this->State = GAME_MENU;
 }
 
+void Collison(std::vector<Fire>& Fires, GameObject& obj) {
+	auto rem = std::remove_if(Fires.begin(), Fires.end(), [&obj](Fire& fire) {
+		bool collisionX = obj.Position.x + obj.Size.x >= fire.Position.x &&
+			obj.Position.x <= fire.Position.x + fire.Size.x;
+		bool collisionY = obj.Position.y + obj.Size.y >= fire.Position.y &&
+			obj.Position.y <= fire.Position.y + fire.Size.y;
+		return collisionX && collisionY;
+		});
+	Fires.erase(rem, Fires.end());
+}
+
+
 void Game::DoCollisions() {
 	auto rem = std::remove_if(Fires.begin(), Fires.end(), [this](Fire& fire) {
 		bool collisionX = Player->Position.x + Player->Size.x >= fire.Position.x &&
@@ -131,8 +143,22 @@ void Game::Resize(float width, float height)
 	}
 }
 
+void checkPosition(GameObject& obj, int width, int height) {
+	if (obj.Position.x < 0)
+		obj.Position.x = 0;
+	if (obj.Position.x > width - obj.Size.x)
+		obj.Position.x = width - obj.Size.x;
+	if (obj.Position.y < 0)
+		obj.Position.y = 0;
+	if (obj.Position.y > height - obj.Size.y)
+		obj.Position.y = height - obj.Size.y;
+}
+
 void Game::Update(float dt)
 {
+	static int i = 0;
+	int moverandx;
+	int moverandy;
 	float playerSize = std::min(this->Width, this->Height) * 0.05f;
 	Player->Size.x = playerSize;
 	Player->Size.y = playerSize;
@@ -140,7 +166,7 @@ void Game::Update(float dt)
 		startFires = true;
 	else if (this->State == GAME_MENU)
 		startFires = false;
-	if (startFires == true) {
+	if (startFires == true) {	// fires & burns
 		for (Fire& fire : Fires) {
 			fire.flekCounter += dt;
 
@@ -165,8 +191,29 @@ void Game::Update(float dt)
 			Fires.push_back(Fire(glm::vec2(x, y), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
 		}
 		DoCollisions();
+
+
+		if (i >= 3)
+			i = 0;
+
+		// move randomly for požigalci & indijanci
+		moverandx = rand()%(20-(-20) +1) -20;
+		moverandy = rand()%(20-(-20) +1) -20;
+		indijanci[i].Position.x += moverandx;
+		indijanci[i].Position.y += moverandy;
+		checkPosition(indijanci[i], this->Width, this->Height);
+		Collison(Fires, indijanci[i]);
+
+		moverandx = rand() % (20 - (-20) + 1) - 20;
+		moverandy = rand() % (20 - (-20) + 1) - 20;
+		pozigalci[i].Position.x += moverandx;
+		pozigalci[i].Position.y += moverandy;
+		checkPosition(pozigalci[i], this->Width, this->Height);
+	
+		i++;
 	}
 }
+
 
 void Game::ProcessInput(float dt)
 {
