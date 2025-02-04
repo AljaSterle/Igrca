@@ -23,8 +23,8 @@ public:
     std::vector<GameLevel> Levels;
     unsigned int Level;
 
-    std::vector<Fire> Fires;
-    std::vector<Fire> Burnt;
+    std::vector<Fire> fires;
+    std::vector<Fire> burnt;
 
 	std::vector<GameObject> indijanci;
 	std::vector<GameObject> pozigalci;
