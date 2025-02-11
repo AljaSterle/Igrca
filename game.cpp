@@ -205,9 +205,10 @@ void Game::Update(float dt)
 					fires.push_back(Fire(glm::vec2(x_pos, y_pos), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
 					fire.expand = 0.0f;
 				*/
-	
-				fire.expand = 0.0f;
 				fire.expanded = true;
+
+				// TODO: figure out why fires change back to smaller 
+				// TODO: expand the burns
 			}
 			else {
 				fire.expand += dt;
