@@ -20,8 +20,8 @@ public:
     bool         startFires;
     unsigned int Width, Height;
 
-    std::vector<GameLevel> Levels;
-    unsigned int Level;
+    std::vector<GameLevel> levels;
+    unsigned int level;
 
     std::vector<Fire> fires;
     std::vector<Fire> burnt;

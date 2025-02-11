@@ -25,7 +25,7 @@ const glm::vec2 PLAYER_SIZE(20, 20);
 const float PLAYER_VELOCITY(300.0f);
 
 Game::Game(unsigned int width, unsigned int height)
-	: Keys(), Width(width), Height(height), State(GAME_ACTIVE), Level(0), startFires(false)
+	: Keys(), Width(width), Height(height), State(GAME_ACTIVE), level(0), startFires(false)
 {
 
 }
@@ -61,9 +61,9 @@ void Game::Init()
 	// load levels
 	GameLevel one;
 	GameLevel two;
-	this->Levels.push_back(one);
-	this->Levels.push_back(two);
-	this->Level = 0;
+	this->levels.push_back(one);
+	this->levels.push_back(two);
+	this->level = 0;
 
 	glm::vec2 playerSize = glm::vec2(this->Width * 0.05f, this->Width * 0.05f);
 	glm::vec2 playerPos = glm::vec2(this->Width / 2 - playerSize.x / 2, this->Height / 2 - playerSize.y);
@@ -156,7 +156,6 @@ void checkPosition(GameObject& obj, int width, int height) {
 
 void Game::Update(float dt)
 {
-	static int i = 0;
 	int moverandx;
 	int moverandy;
 
@@ -193,25 +192,46 @@ void Game::Update(float dt)
 		}
 		DoCollisions();
 
+		float radius = std::min(this->Width, this->Height) / 5;
+		for (GameObject& indijanec : indijanci) {
+			bool inside = false;
+			for (Fire& fire : fires) {
+				float distance = glm::distance(indijanec.Position, fire.Position);
+				if (distance < radius) {
+					glm::vec2 direction = glm::normalize(fire.Position - indijanec.Position);
+					indijanec.Position += direction * PLAYER_VELOCITY * dt;
+					inside = true;
+				}
+			}
+			if (!inside) { // move randomly
+				int kir = rand() % (2 - 1 + 1) + 1;
+				if (kir == 1) {
+					moverandx = rand()%(20-(-20) +1) -20;
+					indijanec.Position.x += moverandx;
+				}
+				else {
+					moverandy = rand()%(20-(-20) +1) -20;
+					indijanec.Position.y += moverandy;
+				}
+				checkPosition(indijanec, this->Width, this->Height);
 
-		if (i >= 3)
-			i = 0;
-
-		// move randomly for požigalci & indijanci
-		moverandx = rand()%(20-(-20) +1) -20;
-		moverandy = rand()%(20-(-20) +1) -20;
-		indijanci[i].Position.x += moverandx;
-		indijanci[i].Position.y += moverandy;
-		checkPosition(indijanci[i], this->Width, this->Height);
-		Collison(fires, indijanci[i]);
-
-		moverandx = rand() % (20 - (-20) + 1) - 20;
-		moverandy = rand() % (20 - (-20) + 1) - 20;
-		pozigalci[i].Position.x += moverandx;
-		pozigalci[i].Position.y += moverandy;
-		checkPosition(pozigalci[i], this->Width, this->Height);
-	
-		i++;
+			}
+			Collison(fires, indijanec);
+		}		
+		
+		// move randomly for požigalci
+		for (GameObject& pozigalec : pozigalci) {
+		int kir = rand() % (2 - 1 + 1) + 1;
+		if (kir == 1) {
+			moverandx = rand() % (20 - (-20) + 1) - 20;
+			pozigalec.Position.x += moverandx;
+		}
+		else {
+			moverandy = rand() % (20 - (-20) + 1) - 20;
+			pozigalec.Position.y += moverandy;
+		}
+		checkPosition(pozigalec, this->Width, this->Height);
+		}
 	}
 }
 
