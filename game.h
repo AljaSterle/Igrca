@@ -22,6 +22,7 @@ public:
 
     std::vector<GameLevel> levels;
     unsigned int level;
+    float kurjenje;
 
     std::vector<Fire> fires;
     std::vector<Fire> burnt;

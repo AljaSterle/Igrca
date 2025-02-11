@@ -25,14 +25,15 @@ const glm::vec2 PLAYER_SIZE(20, 20);
 const float PLAYER_VELOCITY(300.0f);
 
 Game::Game(unsigned int width, unsigned int height)
-	: Keys(), Width(width), Height(height), State(GAME_ACTIVE), level(0), startFires(false)
+	: Keys(), Width(width), Height(height), State(GAME_ACTIVE), level(0), startFires(false), kurjenje(0.0f)
 {
 
 }
 
 Game::~Game()
 {
-
+	delete player;
+	delete renderer;
 }
 
 void Game::Init()
@@ -77,6 +78,11 @@ void Game::Init()
 	}
 
 	this->State = GAME_MENU;
+}
+
+float randomNumber(int min, int max) {
+	float x = rand() % (max - min + 1) + min;
+	return x;
 }
 
 void Collison(std::vector<Fire>& fires, GameObject& obj) {
@@ -154,11 +160,8 @@ void checkPosition(GameObject& obj, int width, int height) {
 		obj.Position.y = height - obj.Size.y;
 }
 
-void Game::Update(float dt)
+void Game::Update(float dt) 
 {
-	int moverandx;
-	int moverandy;
-
 	float playerSize = std::min(this->Width, this->Height) * 0.05f;
 	player->Size.x = playerSize;
 	player->Size.y = playerSize;
@@ -166,7 +169,9 @@ void Game::Update(float dt)
 		startFires = true;
 	else if (this->State == GAME_MENU)
 		startFires = false;
-	if (startFires == true) {	// fires & burns
+
+	// fires & burns
+	if (startFires == true) {	
 		for (Fire& fire : fires) {
 			fire.flekCounter += dt;
 
@@ -192,8 +197,12 @@ void Game::Update(float dt)
 		}
 		DoCollisions();
 
+		int moverandx;
+		int moverandy;
 		float radius = std::min(this->Width, this->Height) / 5;
-		for (GameObject& indijanec : indijanci) {
+
+		// indijanci movement
+		for (GameObject& indijanec : indijanci) { 
 			bool inside = false;
 			for (Fire& fire : fires) {
 				float distance = glm::distance(indijanec.Position, fire.Position);
@@ -219,7 +228,7 @@ void Game::Update(float dt)
 			Collison(fires, indijanec);
 		}		
 		
-		// move randomly for požigalci
+		// pozigalci movement
 		for (GameObject& pozigalec : pozigalci) {
 		int kir = rand() % (2 - 1 + 1) + 1;
 		if (kir == 1) {
@@ -231,6 +240,14 @@ void Game::Update(float dt)
 			pozigalec.Position.y += moverandy;
 		}
 		checkPosition(pozigalec, this->Width, this->Height);
+		}
+
+		// random pozigalec sproži ognj
+		kurjenje += dt;
+		if (kurjenje > 5.0f) {
+			int who = randomNumber(0, pozigalci.size()-1);
+			fires.push_back(Fire(glm::vec2(pozigalci.at(who).Position), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
+			kurjenje = 0;
 		}
 	}
 }
