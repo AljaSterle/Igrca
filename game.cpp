@@ -81,6 +81,9 @@ void Game::Init()
 }
 
 float randomNumber(int min, int max) {
+	if (min > max) {
+		std::swap(min, max);
+	}
 	float x = rand() % (max - min + 1) + min;
 	return x;
 }
@@ -162,32 +165,70 @@ void checkPosition(GameObject& obj, int width, int height) {
 
 void Game::Update(float dt) 
 {
-	float playerSize = std::min(this->Width, this->Height) * 0.05f;
-	player->Size.x = playerSize;
-	player->Size.y = playerSize;
 	if (this->State == GAME_ACTIVE)
 		startFires = true;
 	else if (this->State == GAME_MENU)
 		startFires = false;
 
+	// player resizing
+	float playerSize = std::min(this->Width, this->Height) * 0.05f;
+	player->Size.x = playerSize;
+	player->Size.y = playerSize;
+
 	// fires & burns
 	if (startFires == true) {	
 		for (Fire& fire : fires) {
-			fire.flekCounter += dt;
 
-			if (fire.flekCounter >= fire.flek && fire.nekoc == false) {
-				float x = fire.Position.x - (fire.Size.x/2);
-				float y = fire.Position.y - (fire.Size.y / 2);
-				burnt.push_back(Fire(glm::vec2(x, y), glm::vec2(100, 100), ResourceManager::GetTexture("burnt")));
-				fire.nekoc = true;
+			// if it hasn't burnt forest yet
+			if (fire.nekoc == false) { 
+				fire.flekCounter += dt;
+				if (fire.flekCounter >= fire.flek) { // should it make a burn?
+					float x = fire.Position.x - (fire.Size.x/2);
+					float y = fire.Position.y - (fire.Size.y / 2);
+					burnt.push_back(Fire(glm::vec2(x, y), glm::vec2(100, 100), ResourceManager::GetTexture("burnt")));
+					fire.nekoc = true; // it made a burn :)
+				}
+			
 			}
+
+			// fire expanding after specific period
+			if (fire.expand > fire.not_expanding_yet) {
+				std::cout << "Expansionnnn" << std::endl;
+				/* Expanding by spawning new fires beside old ones
+				
+					int x_temp = randomNumber(0, this->Width);
+					int y_temp = randomNumber(0, this->Height);
+					glm::vec2 direction = glm::normalize(glm::vec2(x_temp, y_temp));
+					int x_pos = fire.Position.x + direction.x * fire.Size.x;
+					int y_pos = fire.Position.y + direction.y * fire.Size.y;
+				
+					fires.push_back(Fire(glm::vec2(x_pos, y_pos), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
+					fire.expand = 0.0f;
+				*/
+	
+				fire.expand = 0.0f;
+				fire.expanded = true;
+			}
+			else {
+				fire.expand += dt;
+			}
+
+			// fire resizing
 			fire.Size.x = 0.05f * std::min(Width, Height);
 			fire.Size.y = 0.05f * std::min(Width, Height);
+			if (fire.expanded == true) {
+				fire.Size.x *= fire.expansion_value;
+				fire.Size.y *= fire.expansion_value;
+			}
 		}
+
+		// burns resizing
 		for (Fire& burnt : burnt) {
 			burnt.Size.x = 0.1f * std::min(Width, Height);
 			burnt.Size.y = 0.1f * std::min(Width, Height);
 		}
+
+		// spawning fire
 		fromSpawn += dt;
 		if (fromSpawn >= spawn) {
 			fromSpawn = 0.0f;
@@ -213,13 +254,13 @@ void Game::Update(float dt)
 				}
 			}
 			if (!inside) { // move randomly
-				int kir = rand() % (2 - 1 + 1) + 1;
+				int kir = randomNumber(2, 1);
 				if (kir == 1) {
-					moverandx = rand()%(20-(-20) +1) -20;
+					moverandx = randomNumber(20, -20);
 					indijanec.Position.x += moverandx;
 				}
 				else {
-					moverandy = rand()%(20-(-20) +1) -20;
+					moverandy = randomNumber(20, -20);
 					indijanec.Position.y += moverandy;
 				}
 				checkPosition(indijanec, this->Width, this->Height);
@@ -230,13 +271,13 @@ void Game::Update(float dt)
 		
 		// pozigalci movement
 		for (GameObject& pozigalec : pozigalci) {
-		int kir = rand() % (2 - 1 + 1) + 1;
+		int kir = randomNumber(2, 1);
 		if (kir == 1) {
-			moverandx = rand() % (20 - (-20) + 1) - 20;
+			moverandx = randomNumber(20, -20);
 			pozigalec.Position.x += moverandx;
 		}
 		else {
-			moverandy = rand() % (20 - (-20) + 1) - 20;
+			moverandy = randomNumber(20, -20);
 			pozigalec.Position.y += moverandy;
 		}
 		checkPosition(pozigalec, this->Width, this->Height);

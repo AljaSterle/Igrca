@@ -9,6 +9,11 @@ public:
 	const float flek = 2.0f;
 	bool nekoc;
 	float flekCounter;
+
+    const float not_expanding_yet = 3.0f;
+    const float expansion_value = 2.0f;
+    bool expanded;
+    float expand = 0.0f;
 	Fire(glm::vec2, glm::vec2, Texture2D);
 	void Draw(SpriteRenderer& renderer);
 
