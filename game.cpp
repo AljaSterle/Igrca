@@ -194,17 +194,17 @@ void Game::Update(float dt)
 			// fire expanding after specific period
 			if (fire.expand > fire.not_expanding_yet) {
 				std::cout << "Expansionnnn" << std::endl;
-				/* Expanding by spawning new fires beside old ones
+				// Expanding by spawning new fires beside old ones
 				
-					int x_temp = randomNumber(0, this->Width);
-					int y_temp = randomNumber(0, this->Height);
-					glm::vec2 direction = glm::normalize(glm::vec2(x_temp, y_temp));
-					int x_pos = fire.Position.x + direction.x * fire.Size.x;
-					int y_pos = fire.Position.y + direction.y * fire.Size.y;
+				int x_temp = randomNumber(0, this->Width);
+				int y_temp = randomNumber(0, this->Height);
+				glm::vec2 direction = glm::normalize(glm::vec2(x_temp, y_temp));
+				int x_pos = fire.Position.x + direction.x * fire.Size.x;
+				int y_pos = fire.Position.y + direction.y * fire.Size.y;
 				
-					fires.push_back(Fire(glm::vec2(x_pos, y_pos), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
-					fire.expand = 0.0f;
-				*/
+				fires.push_back(Fire(glm::vec2(x_pos, y_pos), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
+				fire.expand = 0.0f;
+				
 				fire.expanded = true;
 
 				// TODO: figure out why fires change back to smaller 
@@ -217,10 +217,10 @@ void Game::Update(float dt)
 			// fire resizing
 			fire.Size.x = 0.05f * std::min(Width, Height);
 			fire.Size.y = 0.05f * std::min(Width, Height);
-			if (fire.expanded == true) {
-				fire.Size.x *= fire.expansion_value;
-				fire.Size.y *= fire.expansion_value;
-			}
+			//if (fire.expanded == true) {
+			//	fire.Size.x *= fire.expansion_value;
+			//	fire.Size.y *= fire.expansion_value;
+			//}
 		}
 
 		// burns resizing
@@ -272,16 +272,16 @@ void Game::Update(float dt)
 		
 		// pozigalci movement
 		for (GameObject& pozigalec : pozigalci) {
-		int kir = randomNumber(2, 1);
-		if (kir == 1) {
-			moverandx = randomNumber(20, -20);
-			pozigalec.Position.x += moverandx;
-		}
-		else {
-			moverandy = randomNumber(20, -20);
-			pozigalec.Position.y += moverandy;
-		}
-		checkPosition(pozigalec, this->Width, this->Height);
+			int kir = randomNumber(2, 1);
+			if (kir == 1) {
+				moverandx = randomNumber(20, -20);
+				pozigalec.Position.x += moverandx;
+			}
+			else {
+				moverandy = randomNumber(20, -20);
+				pozigalec.Position.y += moverandy;
+			}
+			checkPosition(pozigalec, this->Width, this->Height);
 		}
 
 		// random pozigalec sproži ognj
