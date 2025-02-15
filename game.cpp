@@ -191,7 +191,7 @@ void Game::Update(float dt)
 			
 			}
 
-			// fire expanding after specific period
+			// fire multiplying after specific period
 			if (fire.expand > fire.not_expanding_yet) {
 				std::cout << "Expansionnnn" << std::endl;
 				// Expanding by spawning new fires beside old ones
@@ -206,9 +206,6 @@ void Game::Update(float dt)
 				fire.expand = 0.0f;
 				
 				fire.expanded = true;
-
-				// TODO: figure out why fires change back to smaller 
-				// TODO: expand the burns
 			}
 			else {
 				fire.expand += dt;
@@ -217,10 +214,6 @@ void Game::Update(float dt)
 			// fire resizing
 			fire.Size.x = 0.05f * std::min(Width, Height);
 			fire.Size.y = 0.05f * std::min(Width, Height);
-			//if (fire.expanded == true) {
-			//	fire.Size.x *= fire.expansion_value;
-			//	fire.Size.y *= fire.expansion_value;
-			//}
 		}
 
 		// burns resizing
