@@ -6,16 +6,14 @@
 
 #include <iostream>
 
-// GLFW function declarations
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
-// The Width of the screen
 const unsigned int SCREEN_WIDTH = 800;
-// The height of the screen
 const unsigned int SCREEN_HEIGHT = 600;
 
 Game Igrca(SCREEN_WIDTH, SCREEN_HEIGHT);
+
 
 int main(int argc, char* argv[]) {
     glfwInit();
@@ -47,17 +45,16 @@ int main(int argc, char* argv[]) {
     // ---------------
     Igrca.Init();
 
-    // deltaTime variables
-    // -------------------
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
 
     while (!glfwWindowShouldClose(window)) {
-        // calculate delta time
-        // --------------------
+
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+        glClearColor(0.13f, 0.56f, 0.13f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
         glfwPollEvents();
 
         // manage user input
@@ -70,9 +67,9 @@ int main(int argc, char* argv[]) {
 
         // render
         // ------
-        
-        glClear(GL_COLOR_BUFFER_BIT);
         Igrca.Render();
+        
+        
 
         glfwSwapBuffers(window);
     }

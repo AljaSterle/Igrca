@@ -2,12 +2,17 @@
 #include "game_object.h"
 #include "fire.h"
 
-#include "game_level.h"
-
 enum GameState {
 	GAME_ACTIVE,
 	GAME_MENU,
-	GAME_WIN
+	GAME_WIN, 
+    GAME_LOST, 
+    GAME_MID_LEVEL
+};
+
+struct GameLevel {
+    glm::vec3 color;
+    float playerSpeedMultiplier;
 };
 
 class Game
@@ -18,9 +23,11 @@ public:
     bool         Keys[1024];
 	bool 	     KeysProcessed[1024];
     bool         startFires;
+    bool         nextLevel;
+    glm::vec3    background;
     unsigned int Width, Height;
 
-    std::vector<GameLevel> levels;
+    GameLevel levels[3];
     unsigned int level;
     float kurjenje;
 
@@ -35,9 +42,11 @@ public:
     ~Game();
     // initialize game state (load all shaders/textures/levels)
     void Init();
+    void LevelInitialize();
     // game loop
     void Resize(float, float);
     void DoCollisions();
+    void CollisionCigani();
     void ProcessInput(float dt);
     void Update(float dt);
     void Render();

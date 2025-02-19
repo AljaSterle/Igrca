@@ -5,18 +5,22 @@
 #include "texture.h"
 #include "game_object.h"
 #include "fire.h"
+#include "text_renderer.h"
 
 #include "GLUtils.h"
 
 #include <cmath>
 #include <cstdlib>
 #include <vector>
+#include <string>
+#include <iostream>
 #include <algorithm>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 SpriteRenderer* renderer;
 GameObject* player;
+TextRenderer* text;
 
 const float spawn = 5.0f;
 float fromSpawn = 0.0f;
@@ -24,8 +28,10 @@ float fromSpawn = 0.0f;
 const glm::vec2 PLAYER_SIZE(20, 20);
 const float PLAYER_VELOCITY(300.0f);
 
+
+
 Game::Game(unsigned int width, unsigned int height)
-	: Keys(), Width(width), Height(height), State(GAME_ACTIVE), level(0), startFires(false), kurjenje(0.0f)
+	: Keys(), Width(width), Height(height), State(GAME_ACTIVE), level(0), startFires(false), kurjenje(0.0f), nextLevel(false)
 {
 
 }
@@ -60,10 +66,9 @@ void Game::Init()
 	ResourceManager::LoadTexture("pozigalec.png", true, "pozigalec");
 
 	// load levels
-	GameLevel one;
-	GameLevel two;
-	this->levels.push_back(one);
-	this->levels.push_back(two);
+	this->levels[0] = {glm::vec3(0.0f, 0.5f, 0.0f), 1.0f}; // Level 1: green background, normal speed
+	this->levels[1] = {glm::vec3(0.5f, 0.0f, 0.0f), 1.5f}; // Level 2: red background, faster speed
+	this->levels[2] = {glm::vec3(0.5f, 0.0f, 0.0f), 2.0f}; // Level 3: red background, even faster speed
 	this->level = 0;
 
 	glm::vec2 playerSize = glm::vec2(this->Width * 0.05f, this->Width * 0.05f);
@@ -77,7 +82,22 @@ void Game::Init()
 		pozigalci.push_back(GameObject(glm::vec2(this->Width - 50, 50), glm::vec2(50, 50), ResourceManager::GetTexture("pozigalec")));
 	}
 
+	text = new TextRenderer(this->Width, this->Height);
+	text->Load("arial.ttf", 24);
+
 	this->State = GAME_MENU;
+}
+
+void Game::LevelInitialize() {
+	glm::vec2 playerSize = glm::vec2(this->Width * 0.05f, this->Width * 0.05f);
+	player->Position = glm::vec2(this->Width / 2 - playerSize.x / 2, this->Height / 2 - playerSize.y);
+	
+	for (int i = 0; i < 3; i++) {
+		indijanci.push_back(GameObject(glm::vec2(50, this->Height - 50), glm::vec2(50, 50), ResourceManager::GetTexture("indijanec")));
+		pozigalci.push_back(GameObject(glm::vec2(this->Width - 50, 50), glm::vec2(50, 50), ResourceManager::GetTexture("pozigalec")));
+	}
+
+	this->background = levels[level].color;
 }
 
 float randomNumber(int min, int max) {
@@ -98,8 +118,17 @@ void Collison(std::vector<Fire>& fires, GameObject& obj) {
 		});
 	fires.erase(rem, fires.end());
 }
-
-
+void Game::CollisionCigani() {
+	for (int i = 0; i < pozigalci.size(); i++) {
+		bool collisionX = player->Position.x + player->Size.x >= pozigalci[i].Position.x &&
+			player->Position.x <= pozigalci[i].Position.x + pozigalci[i].Size.x;
+		bool collisionY = player->Position.y + player->Size.y >= pozigalci[i].Position.y &&
+			player->Position.y <= pozigalci[i].Position.y + pozigalci[i].Size.y;
+		if (collisionX && collisionY) {
+			State = GAME_LOST;
+		}
+	}
+}
 void Game::DoCollisions() {
 	auto rem = std::remove_if(fires.begin(), fires.end(), [this](Fire& fire) {
 		bool collisionX = player->Position.x + player->Size.x >= fire.Position.x &&
@@ -109,6 +138,16 @@ void Game::DoCollisions() {
 		return collisionX && collisionY;
 		});
 	fires.erase(rem, fires.end());
+}
+void CollisonPeople(std::vector<GameObject>& pozigalci, GameObject& indijanc) {
+	auto rem = std::remove_if(pozigalci.begin(), pozigalci.end(), [&indijanc](GameObject& pozigalc) {
+		bool collisionX = indijanc.Position.x + indijanc.Size.x >= pozigalc.Position.x &&
+			indijanc.Position.x <= pozigalc.Position.x + pozigalc.Size.x;
+		bool collisionY = indijanc.Position.y + indijanc.Size.y >= pozigalc.Position.y &&
+			indijanc.Position.y <= pozigalc.Position.y + pozigalc.Size.y;
+		return collisionX && collisionY;
+		});
+	pozigalci.erase(rem, pozigalci.end());
 }
 
 void Game::Resize(float width, float height)
@@ -167,7 +206,7 @@ void Game::Update(float dt)
 {
 	if (this->State == GAME_ACTIVE)
 		startFires = true;
-	else if (this->State == GAME_MENU)
+	else if (this->State == GAME_MENU || this->State == GAME_LOST)
 		startFires = false;
 
 	// player resizing
@@ -231,6 +270,7 @@ void Game::Update(float dt)
 			fires.push_back(Fire(glm::vec2(x, y), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
 		}
 		DoCollisions();
+		CollisionCigani();
 
 		int moverandx;
 		int moverandy;
@@ -261,6 +301,7 @@ void Game::Update(float dt)
 
 			}
 			Collison(fires, indijanec);
+			CollisonPeople(pozigalci, indijanec);
 		}		
 		
 		// pozigalci movement
@@ -284,6 +325,19 @@ void Game::Update(float dt)
 			fires.push_back(Fire(glm::vec2(pozigalci.at(who).Position), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
 			kurjenje = 0;
 		}
+
+		if (pozigalci.size() == 0) {
+			nextLevel = true;
+		}
+		// check if improving to next level
+		if (nextLevel) {
+			level++;
+			if (level > 2)
+				this->State = GAME_WIN;
+			nextLevel = 0;
+			this->State = GAME_MID_LEVEL;
+			LevelInitialize();
+		}
 	}
 }
 
@@ -297,7 +351,7 @@ void Game::ProcessInput(float dt)
 		}
 	}
 	if (this->State == GAME_ACTIVE) {
-		float velocity = PLAYER_VELOCITY * dt;
+		float velocity = PLAYER_VELOCITY * dt * this->levels[level].playerSpeedMultiplier;
 		if (this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE]) {
 			this->State = GAME_MENU;
 			this->KeysProcessed[GLFW_KEY_SPACE] = true;
@@ -323,9 +377,9 @@ void Game::ProcessInput(float dt)
 
 void Game::Render()
 {
-	glClearColor(0.13f, 0.56f, 0.13f, 1.0f);
+	glClearColor(background.x, background.y, background.z, 1.0f);
 
-	if (this->State == GAME_ACTIVE || this->State == GAME_MENU) {
+	if (this->State != GAME_WIN) {
 		for (Fire& burnt : burnt)
 			burnt.Draw(*renderer);
 		for (Fire& fire : fires)
@@ -335,11 +389,71 @@ void Game::Render()
 		for (GameObject& hejtr : pozigalci)
 			hejtr.Draw(*renderer);
 		player->Draw(*renderer);
+
+		text->RenderText("Level: " + std::to_string(level+1), 20.0f, 20.0f, 1.0f);
 	}
 	if (this->State == GAME_MENU) {
 		Texture2D menu = ResourceManager::GetTexture("menu");
-		renderer->DrawSprite(menu, glm::vec2(0, 0), glm::vec2(this->Width, this->Height), 0.0f, glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
+		
+		std::string first = "GAME MENU!";
+		std::string second = "click [SPACE] to continue";
+		float textWidth1 = text->GetTextWidth(first, 1.0f);
+		float textHeight1= text->GetTextWidth(first, 1.0f);
+		float textWidth2 = text->GetTextWidth(second, 1.0f);
+		float textHeight2 = text->GetTextHeight(second, 1.0f);
+
+		// Calculate the position to center the text
+		float x1 = (this->Width - textWidth1) / 2.0f;
+		float y1 = (this->Height - textHeight1) / 2.0f;
+		float x2 = (this->Width - textWidth2) / 2.0f;
+		float y2 = (this->Height - textHeight2) / 2.0f;
+
+		text->RenderText(first, x1, y1, 1.0f);
+		text->RenderText(second, x2, y2 + 50.0f, 1.0f);
+	}
+	if (this->State == GAME_LOST) {
+		std::string first = "YOU LOST THE GAME! ";
+		float textWidth1 = text->GetTextWidth(first, 1.0f);
+		float textHeight1 = text->GetTextWidth(first, 1.0f);
+
+		// Calculate the position to center the text
+		float x1 = (this->Width - textWidth1) / 2.0f;
+		float y1 = (this->Height - textHeight1) / 2.0f;
+
+		text->RenderText(first, x1, y1, 1.0f);
+	}
+	if (this->State == GAME_MID_LEVEL) {
+		std::string first = "YOU CLEARED THIS LEVEL";
+		std::string second = "click [SPACE] to continue on " + std::to_string(level+1) +  ". level";
+		float textWidth1 = text->GetTextWidth(first, 1.0f);
+		float textHeight1 = text->GetTextWidth(first, 1.0f);
+		float textWidth2 = text->GetTextWidth(second, 1.0f);
+		float textHeight2 = text->GetTextHeight(second, 1.0f);
+
+		// Calculate the position to center the text
+		float x1 = (this->Width - textWidth1) / 2.0f;
+		float y1 = (this->Height - textHeight1) / 2.0f;
+		float x2 = (this->Width - textWidth2) / 2.0f;
+		float y2 = (this->Height - textHeight2) / 2.0f;
+
+		text->RenderText(first, x1, y1, 1.0f);
+		text->RenderText(second, x2, y2 + 50.0f, 1.0f);
+	}
+	if (this->State == GAME_WIN) {
+		std::string first = "YOU WON THE GAME! ";
+		float textWidth1 = text->GetTextWidth(first, 1.0f);
+		float textHeight1 = text->GetTextWidth(first, 1.0f);
+
+		// Calculate the position to center the text
+		float x1 = (this->Width - textWidth1) / 2.0f;
+		float y1 = (this->Height - textHeight1) / 2.0f;
+
+		text->RenderText(first, x1, y1, 1.0f);
 	}
 	
 	IsThereError();
 }
+
+
+// TODO: indijanci se zaènejo fuul spawnat po tem ko clearaš level
+// da se lahko premakneš na naslednji level
