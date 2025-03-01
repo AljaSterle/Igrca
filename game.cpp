@@ -28,8 +28,6 @@ float fromSpawn = 0.0f;
 const glm::vec2 PLAYER_SIZE(20, 20);
 const float PLAYER_VELOCITY(300.0f);
 
-
-
 Game::Game(unsigned int width, unsigned int height)
 	: Keys(), Width(width), Height(height), State(GAME_ACTIVE), level(0), startFires(false), kurjenje(0.0f), nextLevel(false)
 {
@@ -89,6 +87,9 @@ void Game::Init()
 }
 
 void Game::LevelInitialize() {
+	indijanci.clear();
+	pozigalci.clear();
+
 	glm::vec2 playerSize = glm::vec2(this->Width * 0.05f, this->Width * 0.05f);
 	player->Position = glm::vec2(this->Width / 2 - playerSize.x / 2, this->Height / 2 - playerSize.y);
 	
@@ -98,6 +99,7 @@ void Game::LevelInitialize() {
 	}
 
 	this->background = levels[level].color;
+	this->State = GAME_ACTIVE;
 }
 
 float randomNumber(int min, int max) {
@@ -206,7 +208,7 @@ void Game::Update(float dt)
 {
 	if (this->State == GAME_ACTIVE)
 		startFires = true;
-	else if (this->State == GAME_MENU || this->State == GAME_LOST)
+	else if (this->State == GAME_MENU || this->State == GAME_LOST || this->State == GAME_MID_LEVEL)
 		startFires = false;
 
 	// player resizing
@@ -334,8 +336,8 @@ void Game::Update(float dt)
 			level++;
 			if (level > 2)
 				this->State = GAME_WIN;
-			nextLevel = 0;
 			this->State = GAME_MID_LEVEL;
+			nextLevel = 0;
 			LevelInitialize();
 		}
 	}
@@ -347,6 +349,11 @@ void Game::ProcessInput(float dt)
 	if (this->State == GAME_MENU) {
 		if (this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE]) {
 			this->State = GAME_ACTIVE;
+			this->KeysProcessed[GLFW_KEY_SPACE] = true;
+		}
+	}
+	if (this->State == GAME_MID_LEVEL) {
+		if (this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE]) {
 			this->KeysProcessed[GLFW_KEY_SPACE] = true;
 		}
 	}
