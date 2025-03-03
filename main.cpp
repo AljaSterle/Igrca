@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-        glClearColor(0.13f, 0.56f, 0.13f, 1.0f);
+        // glClearColor(0.13f, 0.56f, 0.13f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         glfwPollEvents();
 

@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <vector>
+#include <set>
 #include <string>
 #include <iostream>
 #include <algorithm>
@@ -27,6 +28,65 @@ float fromSpawn = 0.0f;
 
 const glm::vec2 PLAYER_SIZE(20, 20);
 const float PLAYER_VELOCITY(300.0f);
+const float OTHER_VELOCITY(300.0f);
+
+struct Event
+{
+	float x, y1, y2;
+	int type; // 1 start, -1 end
+
+	bool operator<(const Event& other) const {
+		if (x == other.x)
+			return type > other.type;
+		return x < other.x;
+	}
+};
+
+float calculateBurntArea(const std::vector<Fire>& burnt) {
+	std::vector<Event> events;
+	for (const auto& fire : burnt) {
+		events.push_back({ fire.Position.x, fire.Position.y, fire.Position.y + fire.Size.y, 1 });
+		events.push_back({ fire.Position.x + fire.Size.x, fire.Position.y, fire.Position.y + fire.Size.y, -1 });
+	}
+
+	std::sort(events.begin(), events.end());
+
+	std::multiset<std::pair<float, float>> activeIntervals;
+	float prevX = 0;
+	float burntArea = 0;
+
+	for (const auto& event : events) {
+		float currentX = event.x;
+
+		// Calculate the total length of active intervals
+		float totalY = 0;
+		float prevY = -1;
+		for (const auto& interval : activeIntervals) {
+			if (interval.first > prevY) {
+				totalY += interval.second - interval.first;
+				prevY = interval.second;
+			}
+			else if (interval.second > prevY) {
+				totalY += interval.second - prevY;
+				prevY = interval.second;
+			}
+		}
+
+		// Calculate the area contribution
+		burntArea += totalY * (currentX - prevX);
+		prevX = currentX;
+
+		// Update the active intervals
+		if (event.type == 1) {
+			activeIntervals.insert({ event.y1, event.y2 });
+		}
+		else {
+			activeIntervals.erase(activeIntervals.find({ event.y1, event.y2 }));
+		}
+	}
+
+	return burntArea;
+}
 
 Game::Game(unsigned int width, unsigned int height)
 	: Keys(), Width(width), Height(height), State(GAME_ACTIVE), level(0), startFires(false), kurjenje(0.0f), nextLevel(false)
@@ -45,7 +105,7 @@ void Game::Init()
 	srand(time(0));
 
 	ResourceManager::LoadShader("sprite.vs", "sprite.fs", nullptr, "sprite");
-	
+	IsThereError();
 	glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(this->Width), static_cast<float>(this->Height), 0.0f, -1.0f, 1.0f);
 
 	Shader tmps = ResourceManager::GetShader("sprite");
@@ -57,16 +117,16 @@ void Game::Init()
 
 	ResourceManager::LoadTexture("awesomeface.png", true, "face");
 	ResourceManager::LoadTexture("block.png", true, "block");
-	ResourceManager::LoadTexture("ogenjcek.jpg", false, "fire");
+	ResourceManager::LoadTexture("betterfire.png", true, "fire");
 	ResourceManager::LoadTexture("burnt.png", true, "burnt");
 	ResourceManager::LoadTexture("menu.png", true, "menu");
 	ResourceManager::LoadTexture("native-american.png", true, "indijanec");
-	ResourceManager::LoadTexture("pozigalec.png", true, "pozigalec");
+	ResourceManager::LoadTexture("ogpozigalec.png", false, "pozigalec");
 
 	// load levels
-	this->levels[0] = {glm::vec3(0.0f, 0.5f, 0.0f), 1.0f}; // Level 1: green background, normal speed
-	this->levels[1] = {glm::vec3(0.5f, 0.0f, 0.0f), 1.5f}; // Level 2: red background, faster speed
-	this->levels[2] = {glm::vec3(0.5f, 0.0f, 0.0f), 2.0f}; // Level 3: red background, even faster speed
+	this->levels[0] = {glm::vec3(0.0f, 0.678f, 0.043f), 1.0f}; // Level 1: green background, normal speed
+	this->levels[1] = {glm::vec3(0.0f, 0.588f, 0.035f), 1.5f}; // Level 2: red background, faster speed
+	this->levels[2] = {glm::vec3(0.0f, 0.478f, 0.031f), 2.0f}; // Level 3: red background, even faster speed
 	this->level = 0;
 
 	glm::vec2 playerSize = glm::vec2(this->Width * 0.05f, this->Width * 0.05f);
@@ -83,6 +143,7 @@ void Game::Init()
 	text = new TextRenderer(this->Width, this->Height);
 	text->Load("arial.ttf", 24);
 
+	this->LevelInitialize();
 	this->State = GAME_MENU;
 }
 
@@ -234,7 +295,7 @@ void Game::Update(float dt)
 
 			// fire multiplying after specific period
 			if (fire.expand > fire.not_expanding_yet) {
-				std::cout << "Expansionnnn" << std::endl;
+				//std::cout << "Expansionnnn" << std::endl;
 				// Expanding by spawning new fires beside old ones
 				
 				int x_temp = randomNumber(0, this->Width);
@@ -274,31 +335,43 @@ void Game::Update(float dt)
 		DoCollisions();
 		CollisionCigani();
 
-		int moverandx;
-		int moverandy;
+		int moverand;
 		float radius = std::min(this->Width, this->Height) / 5;
 
 		// indijanci movement
-		for (GameObject& indijanec : indijanci) { 
+		for (GameObject& indijanec : indijanci) { // following
 			bool inside = false;
 			for (Fire& fire : fires) {
 				float distance = glm::distance(indijanec.Position, fire.Position);
 				if (distance < radius) {
 					glm::vec2 direction = glm::normalize(fire.Position - indijanec.Position);
-					indijanec.Position += direction * PLAYER_VELOCITY * dt;
+					indijanec.Position += direction * OTHER_VELOCITY * dt;
 					inside = true;
 				}
 			}
 			if (!inside) { // move randomly
-				int kir = randomNumber(2, 1);
-				if (kir == 1) {
-					moverandx = randomNumber(20, -20);
-					indijanec.Position.x += moverandx;
+				if (static_cast<float>(rand() / RAND_MAX < 0.3)) {
+					indijanec.direction = static_cast<Direction>(rand() % 4);
 				}
-				else {
-					moverandy = randomNumber(20, -20);
-					indijanec.Position.y += moverandy;
+				moverand = randomNumber(10, -10);
+				switch (indijanec.direction)
+				{
+				case UP:
+					indijanec.Position.y += moverand * OTHER_VELOCITY * dt;
+					break;
+				case DOWN:
+					indijanec.Position.y += moverand * OTHER_VELOCITY * dt;
+					break;
+				case RIGHT:
+					indijanec.Position.x += moverand * OTHER_VELOCITY * dt;
+					break;
+				case LEFT:
+					indijanec.Position.x += moverand * OTHER_VELOCITY * dt;
+					break;
+				default:
+					break;
 				}
+
 				checkPosition(indijanec, this->Width, this->Height);
 
 			}
@@ -308,15 +381,28 @@ void Game::Update(float dt)
 		
 		// pozigalci movement
 		for (GameObject& pozigalec : pozigalci) {
-			int kir = randomNumber(2, 1);
-			if (kir == 1) {
-				moverandx = randomNumber(20, -20);
-				pozigalec.Position.x += moverandx;
+			if (static_cast<float>(rand() / RAND_MAX < 0.3)) {
+				pozigalec.direction = static_cast<Direction>(rand() % 4);
 			}
-			else {
-				moverandy = randomNumber(20, -20);
-				pozigalec.Position.y += moverandy;
+			moverand = randomNumber(10, -10);
+			switch (pozigalec.direction)
+			{
+			case UP:
+				pozigalec.Position.y += moverand * OTHER_VELOCITY * dt;
+				break;
+			case DOWN:
+				pozigalec.Position.y += moverand * OTHER_VELOCITY * dt;
+				break;
+			case RIGHT:
+				pozigalec.Position.x += moverand * OTHER_VELOCITY * dt;
+				break;
+			case LEFT:
+				pozigalec.Position.x += moverand * OTHER_VELOCITY * dt;
+				break;
+			default:
+				break;
 			}
+
 			checkPosition(pozigalec, this->Width, this->Height);
 		}
 
@@ -332,17 +418,20 @@ void Game::Update(float dt)
 			nextLevel = true;
 		}
 		// check if improving to next level
-		if (nextLevel) {
+		if (nextLevel && this->State != GAME_WIN) {
 			level++;
-			if (level > 2)
+			std::cout << "Level: " << level << std::endl;
+			if (level > 2) {
 				this->State = GAME_WIN;
-			this->State = GAME_MID_LEVEL;
-			nextLevel = 0;
-			LevelInitialize();
+			} 
+			else {
+				this->State = GAME_MID_LEVEL;
+				nextLevel = 0;
+				this->State = GAME_MID_LEVEL;
+			}
 		}
 	}
 }
-
 
 void Game::ProcessInput(float dt)
 {
@@ -354,7 +443,15 @@ void Game::ProcessInput(float dt)
 	}
 	if (this->State == GAME_MID_LEVEL) {
 		if (this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE]) {
+			LevelInitialize();
 			this->KeysProcessed[GLFW_KEY_SPACE] = true;
+		}
+	}
+	if (this->State == GAME_LOST) {
+		if (this->Keys[GLFW_KEY_R] && !this->KeysProcessed[GLFW_KEY_R]) {
+			this->level = 0;
+			fires.clear();
+			this->LevelInitialize();
 		}
 	}
 	if (this->State == GAME_ACTIVE) {
@@ -384,6 +481,10 @@ void Game::ProcessInput(float dt)
 
 void Game::Render()
 {
+	float burntArea = calculateBurntArea(burnt);
+	float totalArea = static_cast<float>(Width) * static_cast<float>(Height);
+	float burntPercentage = (burntArea / totalArea) * 100.0f;
+	std::cout << "Burnt area: " << burntArea  << " (" << burntPercentage << "%)" << std::endl;
 	glClearColor(background.x, background.y, background.z, 1.0f);
 
 	if (this->State != GAME_WIN) {
@@ -398,6 +499,7 @@ void Game::Render()
 		player->Draw(*renderer);
 
 		text->RenderText("Level: " + std::to_string(level+1), 20.0f, 20.0f, 1.0f);
+		text->RenderText("Burnt: " + std::to_string(burntPercentage), this->Width - 300.0f, 20.0f, 1.0f);
 	}
 	if (this->State == GAME_MENU) {
 		Texture2D menu = ResourceManager::GetTexture("menu");
@@ -460,7 +562,3 @@ void Game::Render()
 	
 	IsThereError();
 }
-
-
-// TODO: indijanci se zaènejo fuul spawnat po tem ko clearaš level
-// da se lahko premakneš na naslednji level
