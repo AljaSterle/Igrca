@@ -147,9 +147,14 @@ void Game::Init()
 	this->State = GAME_MENU;
 }
 
-void Game::LevelInitialize() {
+void Game::LevelInitialize(char c) {
 	indijanci.clear();
 	pozigalci.clear();
+
+	if (c == 'r') {
+		fires.clear();
+		burnt.clear();
+	}
 
 	glm::vec2 playerSize = glm::vec2(this->Width * 0.05f, this->Width * 0.05f);
 	player->Position = glm::vec2(this->Width / 2 - playerSize.x / 2, this->Height / 2 - playerSize.y);
@@ -451,7 +456,7 @@ void Game::ProcessInput(float dt)
 		if (this->Keys[GLFW_KEY_R] && !this->KeysProcessed[GLFW_KEY_R]) {
 			this->level = 0;
 			fires.clear();
-			this->LevelInitialize();
+			this->LevelInitialize('r');
 		}
 	}
 	if (this->State == GAME_ACTIVE) {
@@ -484,7 +489,7 @@ void Game::Render()
 	float burntArea = calculateBurntArea(burnt);
 	float totalArea = static_cast<float>(Width) * static_cast<float>(Height);
 	float burntPercentage = (burntArea / totalArea) * 100.0f;
-	std::cout << "Burnt area: " << burntArea  << " (" << burntPercentage << "%)" << std::endl;
+	// std::cout << "Burnt area: " << burntArea  << " (" << burntPercentage << "%)" << std::endl;
 	glClearColor(background.x, background.y, background.z, 1.0f);
 
 	if (this->State != GAME_WIN) {

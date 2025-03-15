@@ -42,7 +42,7 @@ public:
     ~Game();
     // initialize game state (load all shaders/textures/levels)
     void Init();
-    void LevelInitialize();
+    void LevelInitialize(char c = 'n');
     // game loop
     void Resize(float, float);
     void DoCollisions();
