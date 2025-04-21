@@ -16,6 +16,7 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
+#include <fstream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -29,6 +30,13 @@ float fromSpawn = 0.0f;
 const glm::vec2 PLAYER_SIZE(20, 20);
 const float PLAYER_VELOCITY(300.0f);
 const float OTHER_VELOCITY(300.0f);
+
+std::ofstream replayWrite;
+std::ifstream replayRead;
+
+struct Poz {
+	glm::vec2 pozicija;
+};
 
 struct Event
 {
@@ -87,13 +95,11 @@ float calculateBurntArea(const std::vector<Fire>& burnt) {
 
 	return burntArea;
 }
-
 Game::Game(unsigned int width, unsigned int height)
-	: Keys(), Width(width), Height(height), State(GAME_ACTIVE), level(0), startFires(false), kurjenje(0.0f), nextLevel(false)
+	: Keys(), Width(width), Height(height), State(GAME_ACTIVE), level(0), startFires(false), kurjenje(0.0f), nextLevel(false), PrevState(GAME_MENU), burntPercentage(0.0f), won(false), lost(false), konc(false)
 {
 
 }
-
 Game::~Game()
 {
 	delete player;
@@ -125,14 +131,17 @@ void Game::Init()
 
 	// load levels
 	this->levels[0] = {glm::vec3(0.0f, 0.678f, 0.043f), 1.0f}; // Level 1: green background, normal speed
-	this->levels[1] = {glm::vec3(0.0f, 0.588f, 0.035f), 1.5f}; // Level 2: red background, faster speed
-	this->levels[2] = {glm::vec3(0.0f, 0.478f, 0.031f), 2.0f}; // Level 3: red background, even faster speed
+	this->levels[1] = {glm::vec3(0.0f, 0.588f, 0.035f), 1.0f}; // Level 2: red background, faster speed
+	this->levels[2] = {glm::vec3(0.0f, 0.478f, 0.031f), 1.0f}; // Level 3: red background, even faster speed
 	this->level = 0;
+	//replay = false;
 
 	glm::vec2 playerSize = glm::vec2(this->Width * 0.05f, this->Width * 0.05f);
 	glm::vec2 playerPos = glm::vec2(this->Width / 2 - playerSize.x / 2, this->Height / 2 - playerSize.y);
 	
 	player = new GameObject(playerPos, PLAYER_SIZE, ResourceManager::GetTexture("block"));
+	fires.reserve(10000);
+	burnt.reserve(10000);
 	fires.clear();
 	burnt.clear();
 	for (int i = 0; i < 3; i++) {
@@ -145,15 +154,17 @@ void Game::Init()
 
 	this->LevelInitialize();
 	this->State = GAME_MENU;
+	this->PrevState = this->State;
 }
 
 void Game::LevelInitialize(char c) {
 	indijanci.clear();
 	pozigalci.clear();
 
-	if (c == 'r') {
+	if (c == 'p') {
 		fires.clear();
 		burnt.clear();
+		won = false; lost = false;
 	}
 
 	glm::vec2 playerSize = glm::vec2(this->Width * 0.05f, this->Width * 0.05f);
@@ -166,6 +177,10 @@ void Game::LevelInitialize(char c) {
 
 	this->background = levels[level].color;
 	this->State = GAME_ACTIVE;
+
+	konc = false;
+
+	replayWrite.open("replay.bin", std::ios::binary);
 }
 
 float randomNumber(int min, int max) {
@@ -176,46 +191,23 @@ float randomNumber(int min, int max) {
 	return x;
 }
 
-void Collison(std::vector<Fire>& fires, GameObject& obj) {
-	auto rem = std::remove_if(fires.begin(), fires.end(), [&obj](Fire& fire) {
-		bool collisionX = obj.Position.x + obj.Size.x >= fire.Position.x &&
-			obj.Position.x <= fire.Position.x + fire.Size.x;
-		bool collisionY = obj.Position.y + obj.Size.y >= fire.Position.y &&
-			obj.Position.y <= fire.Position.y + fire.Size.y;
+template <typename Container, typename Object>
+void HandleCollisions(Container& objects, Object& target, std::function<void()> onCollision = nullptr) {
+	auto rem = std::remove_if(objects.begin(), objects.end(), [&target](auto& obj) {
+		bool collisionX = target.Position.x + target.Size.x >= obj.Position.x &&
+			target.Position.x <= obj.Position.x + obj.Size.x;
+		bool collisionY = target.Position.y + target.Size.y >= obj.Position.y &&
+			target.Position.y <= obj.Position.y + obj.Size.y;
 		return collisionX && collisionY;
 		});
-	fires.erase(rem, fires.end());
-}
-void Game::CollisionCigani() {
-	for (int i = 0; i < pozigalci.size(); i++) {
-		bool collisionX = player->Position.x + player->Size.x >= pozigalci[i].Position.x &&
-			player->Position.x <= pozigalci[i].Position.x + pozigalci[i].Size.x;
-		bool collisionY = player->Position.y + player->Size.y >= pozigalci[i].Position.y &&
-			player->Position.y <= pozigalci[i].Position.y + pozigalci[i].Size.y;
-		if (collisionX && collisionY) {
-			State = GAME_LOST;
+
+	if (onCollision) {
+		for (auto it = rem; it != objects.end(); ++it) {
+			onCollision();
 		}
 	}
-}
-void Game::DoCollisions() {
-	auto rem = std::remove_if(fires.begin(), fires.end(), [this](Fire& fire) {
-		bool collisionX = player->Position.x + player->Size.x >= fire.Position.x &&
-			player->Position.x <= fire.Position.x + fire.Size.x;
-		bool collisionY = player->Position.y + player->Size.y >= fire.Position.y &&
-			player->Position.y <= fire.Position.y + fire.Size.y;
-		return collisionX && collisionY;
-		});
-	fires.erase(rem, fires.end());
-}
-void CollisonPeople(std::vector<GameObject>& pozigalci, GameObject& indijanc) {
-	auto rem = std::remove_if(pozigalci.begin(), pozigalci.end(), [&indijanc](GameObject& pozigalc) {
-		bool collisionX = indijanc.Position.x + indijanc.Size.x >= pozigalc.Position.x &&
-			indijanc.Position.x <= pozigalc.Position.x + pozigalc.Size.x;
-		bool collisionY = indijanc.Position.y + indijanc.Size.y >= pozigalc.Position.y &&
-			indijanc.Position.y <= pozigalc.Position.y + pozigalc.Size.y;
-		return collisionX && collisionY;
-		});
-	pozigalci.erase(rem, pozigalci.end());
+
+	objects.erase(rem, objects.end());
 }
 
 void Game::Resize(float width, float height)
@@ -259,7 +251,7 @@ void Game::Resize(float width, float height)
 	}
 }
 
-void checkPosition(GameObject& obj, int width, int height) {
+void ValidatePosition(GameObject& obj, int width, int height) {
 	if (obj.Position.x < 0)
 		obj.Position.x = 0;
 	if (obj.Position.x > width - obj.Size.x)
@@ -269,11 +261,82 @@ void checkPosition(GameObject& obj, int width, int height) {
 	if (obj.Position.y > height - obj.Size.y)
 		obj.Position.y = height - obj.Size.y;
 }
+bool Game::checkPosition(int x, int y) {
+	int manjsi = std::min(this->Width, this->Height);
+	if((x + manjsi/5)<this->Width && (x >= 0) && ((y + manjsi / 5)<this->Height && y >= 0))
+		return true;
+	return false;
+}
+
+void Game::StartReplay() {
+	//std::cout << "REPLAYYYY" << std::endl;
+	replayRead.open("replay.bin", std::ios::binary);
+	this->PrevState = this->State;
+	this->State = GAME_REPLAY;
+	replayFrameCounter = 0;
+}
+
+void Game::ReplayUpdate() {
+	//std::cout << "PREPLAY UPDEJTTTTTT" << std::endl;
+	if (replayRead.is_open()) {
+		struct Poz p;
+		if (replayRead.read((char*)&p, sizeof(p))) {
+			player->Position = p.pozicija;
+		}
+		else {
+			// End of replay
+			replayRead.close();
+			this->State = this->PrevState;
+		}
+		
+	}
+}
+
+struct Zapis {
+	char name[30];
+	int level;
+	float proc;
+	float score;
+};
+
+void Game::SaveToLeaderboard() {
+	std::ofstream odata("new.bin", std::ios::binary);
+	std::ifstream idata("leaderboard.bin", std::ios::binary);
+	struct Zapis notr;
+	strcpy_s(notr.name, playerName.c_str());
+	notr.level = level;
+	notr.proc = burntPercentage;
+	notr.score = (level * 100) - (burntPercentage * 10);
+	int i = 0;
+	struct Zapis beri;  bool already = false;
+	while (idata.read((char*)&beri, sizeof(beri)) && i < 5) {
+		if (beri.score < notr.score && !already) {
+			odata.write((char*)&notr, sizeof(notr));
+			already = true;
+			i++;
+		}
+		odata.write((char*)&beri, sizeof(beri));
+		i++;
+	}
+	if (!already && i < 5) {
+		odata.write((char*)&notr, sizeof(notr));
+	}
+	idata.close(); odata.close();
+	remove("leaderboard.bin"); rename("new.bin", "leaderboard.bin");
+	playerName.clear();
+}
 
 void Game::Update(float dt) 
 {
-	if (this->State == GAME_ACTIVE)
+	if (this->State == GAME_ACTIVE) {
 		startFires = true;
+
+		if (replayWrite.is_open()) {
+			struct Poz p;
+			p.pozicija = player->Position;
+			replayWrite.write((char*)&p, sizeof(p));
+		}
+	}
 	else if (this->State == GAME_MENU || this->State == GAME_LOST || this->State == GAME_MID_LEVEL)
 		startFires = false;
 
@@ -306,10 +369,11 @@ void Game::Update(float dt)
 				int x_temp = randomNumber(0, this->Width);
 				int y_temp = randomNumber(0, this->Height);
 				glm::vec2 direction = glm::normalize(glm::vec2(x_temp, y_temp));
-				int x_pos = fire.Position.x + direction.x * fire.Size.x;
-				int y_pos = fire.Position.y + direction.y * fire.Size.y;
-				
-				fires.push_back(Fire(glm::vec2(x_pos, y_pos), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
+				int x_pos = (fire.Position.x + direction.x * fire.Size.x) + 50.0f;
+				int y_pos = (fire.Position.y + direction.y * fire.Size.y) + 50.0f;
+				if (checkPosition(x_pos, y_pos)) {
+					fires.push_back(Fire(glm::vec2(x_pos, y_pos), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
+				}
 				fire.expand = 0.0f;
 				
 				fire.expanded = true;
@@ -323,12 +387,6 @@ void Game::Update(float dt)
 			fire.Size.y = 0.05f * std::min(Width, Height);
 		}
 
-		// burns resizing
-		for (Fire& burnt : burnt) {
-			burnt.Size.x = 0.1f * std::min(Width, Height);
-			burnt.Size.y = 0.1f * std::min(Width, Height);
-		}
-
 		// spawning fire
 		fromSpawn += dt;
 		if (fromSpawn >= spawn) {
@@ -337,11 +395,13 @@ void Game::Update(float dt)
 			float y = rand() % (this->Height);
 			fires.push_back(Fire(glm::vec2(x, y), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
 		}
-		DoCollisions();
-		CollisionCigani();
+		// DoCollisions();
+		HandleCollisions(fires, *player);
+		//CollisionCigani();
+		HandleCollisions(pozigalci, *player, [this]() { State = GAME_LOST; });
 
 		int moverand;
-		float radius = std::min(this->Width, this->Height) / 5;
+		float radius = std::min(this->Width, this->Height) / 2;
 
 		// indijanci movement
 		for (GameObject& indijanec : indijanci) { // following
@@ -377,11 +437,13 @@ void Game::Update(float dt)
 					break;
 				}
 
-				checkPosition(indijanec, this->Width, this->Height);
+				ValidatePosition(indijanec, this->Width, this->Height);
 
 			}
-			Collison(fires, indijanec);
-			CollisonPeople(pozigalci, indijanec);
+			// Collison(fires, indijanec);
+			HandleCollisions(fires, indijanec);
+			// CollisonPeople(pozigalci, indijanec);
+			HandleCollisions(pozigalci, indijanec);
 		}		
 		
 		// pozigalci movement
@@ -408,12 +470,12 @@ void Game::Update(float dt)
 				break;
 			}
 
-			checkPosition(pozigalec, this->Width, this->Height);
+			ValidatePosition(pozigalec, this->Width, this->Height);
 		}
 
 		// random pozigalec sproži ognj
 		kurjenje += dt;
-		if (kurjenje > 5.0f) {
+		if (kurjenje > 5.0f && !pozigalci.empty()) {
 			int who = randomNumber(0, pozigalci.size()-1);
 			fires.push_back(Fire(glm::vec2(pozigalci.at(who).Position), glm::vec2(50, 50), ResourceManager::GetTexture("fire")));
 			kurjenje = 0;
@@ -428,18 +490,43 @@ void Game::Update(float dt)
 			std::cout << "Level: " << level << std::endl;
 			if (level > 2) {
 				this->State = GAME_WIN;
+				won = true;
 			} 
 			else {
-				this->State = GAME_MID_LEVEL;
 				nextLevel = 0;
 				this->State = GAME_MID_LEVEL;
 			}
 		}
 	}
+	if ((this->State == GAME_MID_LEVEL || this->State == GAME_WIN || this->State == GAME_LOST)) {
+		if (replayWrite.is_open()) {
+			replayWrite.close();
+		}
+		//this->PrevState = this->State;
+	}
+	if (this->State != GAME_ACTIVE) {
+		startFires = false;
+	}
+	if ((this->State == GAME_LOST || this->State == GAME_WIN) && !konc) {
+		this->PrevState = this->State; // Save the previous state
+		konc = true;
+		this->State = GAME_NAME_INPUT; // Transition to name input
+	}
 }
 
 void Game::ProcessInput(float dt)
 {
+	if ((this->State == GAME_MID_LEVEL || this->State == GAME_WIN || this->State == GAME_LOST)) {
+		if (this->Keys[GLFW_KEY_R] && !this->KeysProcessed[GLFW_KEY_R]) {
+			StartReplay();
+			this->KeysProcessed[GLFW_KEY_R] = true;
+		}
+		if (this->Keys[GLFW_KEY_L] && !this->KeysProcessed[GLFW_KEY_L]) {
+			this->PrevState = this->State;
+			this->State = GAME_LEADERBOARD;
+			this->KeysProcessed[GLFW_KEY_L] = true;
+		}
+	}
 	if (this->State == GAME_MENU) {
 		if (this->Keys[GLFW_KEY_SPACE] && !this->KeysProcessed[GLFW_KEY_SPACE]) {
 			this->State = GAME_ACTIVE;
@@ -451,12 +538,45 @@ void Game::ProcessInput(float dt)
 			LevelInitialize();
 			this->KeysProcessed[GLFW_KEY_SPACE] = true;
 		}
+
 	}
 	if (this->State == GAME_LOST) {
-		if (this->Keys[GLFW_KEY_R] && !this->KeysProcessed[GLFW_KEY_R]) {
+		if (this->Keys[GLFW_KEY_P] && !this->KeysProcessed[GLFW_KEY_P]) {
 			this->level = 0;
 			fires.clear();
-			this->LevelInitialize('r');
+			this->LevelInitialize('p');
+		}
+	}
+	if (this->State == GAME_LEADERBOARD) {
+		if (this->Keys[GLFW_KEY_C] && !this->KeysProcessed[GLFW_KEY_C]) {
+			this->State = this->PrevState;
+			this->KeysProcessed[GLFW_KEY_C] = true;
+		}
+	}
+	if (this->State == GAME_REPLAY) {
+		if (this->Keys[GLFW_KEY_C] && !this->KeysProcessed[GLFW_KEY_C]) {
+			replayRead.close();
+			this->State = this->PrevState;
+			this->KeysProcessed[GLFW_KEY_C] = true;
+		}
+	}
+	if (this->State == GAME_NAME_INPUT) {
+		for (int key = GLFW_KEY_A; key <= GLFW_KEY_Z; key++) {
+			if (this->Keys[key] && !this->KeysProcessed[key]) {
+				this->playerName += static_cast<char>(key);
+				this->KeysProcessed[key] = true;;
+			}
+		}
+		if (this->Keys[GLFW_KEY_BACKSPACE] && !this->KeysProcessed[GLFW_KEY_BACKSPACE]) {
+			if (!this->playerName.empty()) {
+				this->playerName.pop_back();
+			}
+			this->KeysProcessed[GLFW_KEY_BACKSPACE] = true;
+		}
+		if (this->Keys[GLFW_KEY_ENTER] && !this->KeysProcessed[GLFW_KEY_ENTER]) {
+			SaveToLeaderboard();    // Save the player's name and score
+			this->State = GAME_LEADERBOARD; // Transition to the next state (e.g., leaderboard or menu)
+			this->KeysProcessed[GLFW_KEY_ENTER] = true;
 		}
 	}
 	if (this->State == GAME_ACTIVE) {
@@ -486,12 +606,25 @@ void Game::ProcessInput(float dt)
 
 void Game::Render()
 {
+	//std::cout << fires.size() << std::endl;
 	float burntArea = calculateBurntArea(burnt);
 	float totalArea = static_cast<float>(Width) * static_cast<float>(Height);
-	float burntPercentage = (burntArea / totalArea) * 100.0f;
+	burntPercentage = (burntArea / totalArea) * 100.0f;
+	if (burntPercentage >= 25) {
+		this->State = GAME_LOST;
+	}
 	// std::cout << "Burnt area: " << burntArea  << " (" << burntPercentage << "%)" << std::endl;
+	std::cout << this->State << std::endl;
 	glClearColor(background.x, background.y, background.z, 1.0f);
 
+	if (this->State == GAME_REPLAY) {
+		ReplayUpdate();
+		player->Draw(*renderer);
+		return;
+	}
+	if (this->State == GAME_NAME_INPUT) {
+		text->RenderText("Enter your name: " + this->playerName, 20.0f, this->Height / 2.0f, 1.0f);
+	}
 	if (this->State != GAME_WIN) {
 		for (Fire& burnt : burnt)
 			burnt.Draw(*renderer);
@@ -503,10 +636,9 @@ void Game::Render()
 			hejtr.Draw(*renderer);
 		player->Draw(*renderer);
 
-		text->RenderText("Level: " + std::to_string(level+1), 20.0f, 20.0f, 1.0f);
+		text->RenderText("Level: " + std::to_string(level + 1), 20.0f, 20.0f, 1.0f);
 		text->RenderText("Burnt: " + std::to_string(burntPercentage), this->Width - 300.0f, 20.0f, 1.0f);
-	}
-	if (this->State == GAME_MENU) {
+	}if (this->State == GAME_MENU) {
 		Texture2D menu = ResourceManager::GetTexture("menu");
 		
 		std::string first = "GAME MENU!";
@@ -524,8 +656,7 @@ void Game::Render()
 
 		text->RenderText(first, x1, y1, 1.0f);
 		text->RenderText(second, x2, y2 + 50.0f, 1.0f);
-	}
-	if (this->State == GAME_LOST) {
+	}if (this->State == GAME_LOST) {
 		std::string first = "YOU LOST THE GAME! ";
 		float textWidth1 = text->GetTextWidth(first, 1.0f);
 		float textHeight1 = text->GetTextWidth(first, 1.0f);
@@ -535,8 +666,7 @@ void Game::Render()
 		float y1 = (this->Height - textHeight1) / 2.0f;
 
 		text->RenderText(first, x1, y1, 1.0f);
-	}
-	if (this->State == GAME_MID_LEVEL) {
+	}if (this->State == GAME_MID_LEVEL) {
 		std::string first = "YOU CLEARED THIS LEVEL";
 		std::string second = "click [SPACE] to continue on " + std::to_string(level+1) +  ". level";
 		float textWidth1 = text->GetTextWidth(first, 1.0f);
@@ -552,8 +682,7 @@ void Game::Render()
 
 		text->RenderText(first, x1, y1, 1.0f);
 		text->RenderText(second, x2, y2 + 50.0f, 1.0f);
-	}
-	if (this->State == GAME_WIN) {
+	}if (this->State == GAME_WIN) {
 		std::string first = "YOU WON THE GAME! ";
 		float textWidth1 = text->GetTextWidth(first, 1.0f);
 		float textHeight1 = text->GetTextWidth(first, 1.0f);
@@ -564,6 +693,25 @@ void Game::Render()
 
 		text->RenderText(first, x1, y1, 1.0f);
 	}
-	
+	if (this->State == GAME_LEADERBOARD) {
+		std::string ldb = "LEADERBOARD: ";
+		float textWidth = text->GetTextWidth(ldb, 1.0f);
+		float x = (this->Width - textWidth) / 2.0f;
+		text->RenderText(ldb, x, 100, 1.0f);
+		std::ifstream data("leaderboard.bin", std::ios::binary);
+		struct Zapis a;
+		int paddingY = 250;
+		while (data.read((char*)&a, sizeof(a))) {
+			std::string name = a.name;
+			float score = a.score;
+			std::string izpis = name +":   " + std::to_string(score);
+			float textWidth1 = text->GetTextWidth(izpis, 1.0f);
+			float textHeight1 = text->GetTextWidth(izpis, 1.0f);
+			float x1 = (this->Width - textWidth1) / 2.0f;
+			text->RenderText(izpis, x1, paddingY, 1.0f);
+			paddingY += 50;
+		}
+		data.close();
+	}
 	IsThereError();
 }
