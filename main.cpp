@@ -103,8 +103,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 
 	Igrca.Resize(width, height);
 
-	Igrca.Width = width;
-	Igrca.Height = height;
+	Igrca.SetWidth(width);
+	Igrca.SetHeight(height);
 
     // Update the projection matrix
     glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, -1.0f, 1.0f);

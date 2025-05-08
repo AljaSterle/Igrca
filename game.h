@@ -20,12 +20,9 @@ struct GameLevel {
 
 class Game
 {
-public:
     // game state
     GameState    State;
     GameState    PrevState;
-    bool         Keys[1024];
-	bool 	     KeysProcessed[1024];
     bool         startFires;
     bool         nextLevel;
     bool         won, lost, konc;
@@ -45,6 +42,9 @@ public:
 	std::vector<GameObject> indijanci;
 	std::vector<GameObject> pozigalci;
 
+public:
+    bool         Keys[1024];
+    bool 	     KeysProcessed[1024];
     // constructor/destructor
     Game(unsigned int width, unsigned int height);
     ~Game();
@@ -57,7 +57,12 @@ public:
     void StartReplay();
     void ReplayUpdate();
     void SaveToLeaderboard();
+    void SaveGame();
+    void LoadGame();
     void ProcessInput(float dt);
     void Update(float dt);
     void Render();
+
+    void SetWidth(int);
+    void SetHeight(int);
 };

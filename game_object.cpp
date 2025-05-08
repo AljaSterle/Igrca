@@ -11,3 +11,24 @@ void GameObject::Draw(SpriteRenderer& renderer)
 {
     renderer.DrawSprite(this->Sprite, this->Position, this->Size, 0.0, this->Color);
 }
+void GameObject::SetPosition(glm::vec2 p) {
+    this->Position = p;
+}
+void GameObject::SetSize(glm::vec2 s) {
+    this->Size = s;
+}
+void GameObject::SetDirection(Direction d) {
+    this->direction = d;
+}
+void GameObject::SetSprite(Texture2D s) {
+    this->Sprite = s;
+}
+glm::vec2 GameObject::GetPosition() const {
+    return this->Position;
+}
+glm::vec2 GameObject::GetSize() const {
+    return this->Size;
+}
+Direction GameObject::GetDirection() {
+    return this->direction;
+}
